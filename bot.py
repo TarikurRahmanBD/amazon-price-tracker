@@ -34,8 +34,9 @@ def get_eur_to_bdt_rate():
 
 async def get_amazon_price(page, url):
   try:
-    await page.goto(url, timeout=60000)
-    await page.wait_for_timeout(3000)
+    # টাইমআউট বাড়িয়ে ৯০ সেকেন্ড করা হয়েছে যাতে সার্ভার লোড নিতে সমস্যা না হয়
+    await page.goto(url, timeout=90000, wait_until="domcontentloaded")
+    await page.wait_for_timeout(5000)
 
     price_whole = await page.locator(".a-price-whole").first.inner_text()
     price_fraction = await page.locator(".a-price-fraction").first.inner_text()
@@ -57,8 +58,9 @@ async def main():
     context = await browser.new_context(
         user_agent=(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
-            " like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+            " like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        ),
+        viewport={"width": 1280, "height": 800},
     )
     page = await context.new_page()
 
@@ -69,11 +71,14 @@ async def main():
         "-----------------------------------\n\n"
     )
 
+    success_count = 0
+
     for product in products:
       print(f"Checking price for: {product['name']}...")
       current_price_eur = await get_amazon_price(page, product["url"])
 
       if current_price_eur:
+        success_count += 1
         # BDT হিসাব করা (EUR × BDT Rate)
         current_price_bdt = current_price_eur * eur_to_bdt
         print(
@@ -87,10 +92,15 @@ async def main():
             f"🔗 [Amazon Link]({product['url']})\n\n"
         )
 
-      await asyncio.sleep(5)
+      # পণ্যের মাঝে বিরতি বাড়িয়ে ১০ সেকেন্ড করা হলো
+      await asyncio.sleep(10)
 
-    # এক মেসেজেই ৩টি পণ্যের লাইভ EUR ও BDT আপডেট টেলিগ্রামে পাঠানো
-    await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
+    # যদি অন্তত একটি পণ্যের দাম পাওয়া যায়, তবেই টেলিগ্রামে মেসেজ পাঠাবে
+    if success_count > 0:
+      await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
+    else:
+      print("No prices fetched successfully, skipping telegram message.")
+
     await browser.close()
 
 

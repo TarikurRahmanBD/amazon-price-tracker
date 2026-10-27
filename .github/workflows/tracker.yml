@@ -3,7 +3,7 @@ name: Amazon Price Tracker
 on:
   schedule:
     - cron: '0 */2 * * *' # প্রতি ২ ঘণ্টা পর পর রান করবে
-  workflow_dispatch: # ম্যানুয়ালি টেস্ট রান করার সুবিধা
+  workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
 
 jobs:
   run-tracker:
